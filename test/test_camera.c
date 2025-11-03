@@ -23,7 +23,22 @@
 
 #include <sc_camera.h>
 
-#define SC_CAMERA_TEST_EPS 10e-6
+#define SC_CAMERA_TEST_EPS 1e-6
+
+static void
+check_difference(sc_camera_coords_t *expected,
+                 sc_camera_coords_t *actual,
+                 size_t length,
+                 const char *msg)
+{
+  size_t i;
+  for (i = 0; i < length; ++i)
+  {
+    SC_CHECK_ABORT(fabs(expected[i] - actual[i]) < SC_CAMERA_TEST_EPS,
+                   msg);
+  }
+}
+
 
 static void 
 quat_conjugate_transform(sc_camera_vec4_t out,
@@ -65,10 +80,7 @@ test_yaw_pitch_roll(sc_camera_t *camera)
   sc_camera_yaw(camera, M_PI/2.0);
   quat_conjugate_transform(p, camera->rotation, p);
 
-  SC_CHECK_ABORT(fabs(p[0] - -1.) < SC_CAMERA_TEST_EPS &&
-                 fabs(p[1] - 1.) < SC_CAMERA_TEST_EPS &&
-                 fabs(p[2] - 1.) < SC_CAMERA_TEST_EPS,
-                 "Yaw test failed");
+  check_difference((sc_camera_vec3_t){-1., 1., 1.}, p, 3, "Yaw test failed.");
 
   p[0] = 1.; p[1] = 1.; p[2] = 1.; p[3] = 0.;
 
@@ -76,10 +88,7 @@ test_yaw_pitch_roll(sc_camera_t *camera)
   sc_camera_pitch(camera, M_PI/2.0);
   quat_conjugate_transform(p, camera->rotation, p);
 
-  SC_CHECK_ABORT(fabs(p[0] - 1.) < SC_CAMERA_TEST_EPS &&
-                 fabs(p[1] - 1.) < SC_CAMERA_TEST_EPS &&
-                 fabs(p[2] - -1.) < SC_CAMERA_TEST_EPS,
-                 "Pitch test failed");
+  check_difference((sc_camera_vec3_t){1., 1., -1.}, p, 3, "Pitch test failed.");
 
   p[0] = 1.; p[1] = 1.; p[2] = 1.; p[3] = 0.;
 
@@ -87,10 +96,7 @@ test_yaw_pitch_roll(sc_camera_t *camera)
   sc_camera_roll(camera, M_PI/2.0);
   quat_conjugate_transform(p, camera->rotation, p);
 
-  SC_CHECK_ABORT(fabs(p[0] - 1.) < SC_CAMERA_TEST_EPS &&
-                 fabs(p[1] - -1.) < SC_CAMERA_TEST_EPS &&
-                 fabs(p[2] - 1.) < SC_CAMERA_TEST_EPS,
-                 "Roll test failed");
+  check_difference((sc_camera_vec3_t){1., -1., 1.}, p, 3, "Roll test failed.");
 }
 
 static void
