@@ -102,7 +102,30 @@ test_yaw_pitch_roll(sc_camera_t *camera)
 static void
 test_look_at(sc_camera_t *camera)
 {
+  sc_camera_vec3_t eye = {1., 2., 3.};
+  sc_camera_vec3_t center = {1., 0., -1.};
+  sc_camera_vec3_t up = {0., 1., 0.};
 
+  sc_camera_vec4_t p;
+
+  sc_camera_look_at(camera, eye, center, up);
+
+  check_difference((sc_camera_vec3_t){1., 2., 3.}, camera->position, 3,
+                   "Look at position test failed.");
+
+  /* p = center - eye */
+  p[0] = 0.; p[1] = -2.; p[2] = -4.; p[3] = 0.;
+  quat_conjugate_transform(p, camera->rotation, p);
+
+  check_difference((sc_camera_vec4_t){0., 0., -sqrt(20.), 0.}, p, 4,
+                   "Look at test failed.");
+
+  /* p = up */
+  p[0] = 0.; p[1] = 1.; p[2] = 0.; p[3] = 0.;
+  quat_conjugate_transform(p, camera->rotation, p);
+
+  check_difference(&p[0], (sc_camera_coords_t[]){0.}, 1,
+                   "Look at up x test failed.");
 }
 
 int
@@ -116,6 +139,8 @@ main (int argc, char **argv)
   camera = sc_camera_new();
 
   test_yaw_pitch_roll(camera);
+
+  test_look_at(camera);
 
   sc_camera_destroy(camera);
 
