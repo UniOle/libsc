@@ -128,6 +128,98 @@ test_look_at(sc_camera_t *camera)
                    "Look at up x test failed.");
 }
 
+void 
+test_view_transform(sc_camera_t *camera)
+{
+  sc_camera_vec3_t eye = {0.0, 0.0, 5.0};
+  sc_camera_vec3_t center = {3.0,4.0,5.0};
+  sc_camera_vec3_t up = {3.0, 4.0, 7.0};
+  sc_array_t *points_in, *points_out;
+
+  points_in  = sc_array_new_count(sizeof(sc_camera_vec3_t), 3);
+  points_out = sc_array_new(sizeof(sc_camera_vec3_t));
+
+  memcpy(sc_array_index(points_in, 0), &eye,    sizeof(sc_camera_vec3_t));
+  memcpy(sc_array_index(points_in, 1), &center, sizeof(sc_camera_vec3_t));
+  memcpy(sc_array_index(points_in, 2), &up,     sizeof(sc_camera_vec3_t));
+
+  sc_camera_look_at(camera, eye, center, up);
+
+  sc_camera_view_transform(camera, points_in, points_out);
+
+  check_difference((sc_camera_vec3_t) {0.,0.,0.}, sc_array_index(points_out, 0),
+     3, "View transform test failed 0.");
+
+  check_difference((sc_camera_vec3_t) {0.,0.,-5.}, sc_array_index(points_out, 1),
+     3, "View transform test failed 1.");
+
+  check_difference((sc_camera_vec3_t) {0.,2.,-5.}, sc_array_index(points_out, 2),
+     3, "View transform test failed 2.");
+
+  sc_array_destroy(points_in);
+  sc_array_destroy(points_out);
+}
+
+void
+test_get_view_mat(sc_camera_t *camera)
+{
+  sc_camera_mat4x4_t view_matrix;
+  sc_camera_vec3_t eye = {-1., 4., 3.};
+  sc_camera_vec3_t center = {2., 0., 1.};
+  sc_camera_vec3_t up = {1., 1., 0.};
+
+  /* The expected view matrix was calculated with GLM (OpenGl mathematics) library. */
+  /* see : glm::lookAt<glm::f64> (The GLM library uses the same conventions for the view transform.) */
+  sc_camera_mat4x4_t expected = {
+    0.264906471413, 0.787070348709, -0.557086014531, 0.000000000000,
+    -0.264906471413, 0.614898709929, 0.742781352708, 0.000000000000,
+    0.927172649946, -0.049191896794, 0.371390676354, 0.000000000000,
+    -1.456985592772, -1.524948800624, -4.642383454426, 1.000000000000
+  };
+
+  sc_camera_look_at(camera, eye, center, up);
+  sc_camera_get_view_mat(camera, view_matrix);
+
+  check_difference(expected,
+                   view_matrix,
+                   16,
+                   "Get view matrix test failed.");
+}
+
+void
+test_get_projection_mat(sc_camera_t *camera)
+{
+  sc_camera_mat4x4_t proj_matrix;
+
+  /* The expected view matrix was calculated with GLM (OpenGl mathematics) library. */
+  /* see : glm::perspective<glm::f64> (The GLM library uses slightly different conventions (FOV in y-direction).) */
+  sc_camera_mat4x4_t expected = {
+    1.732050807569, 0.000000000000, 0.000000000000, 0.000000000000,
+    0.000000000000, 2.309401076759, 0.000000000000, 0.000000000000,
+    0.000000000000, 0.000000000000, -1.002002002002, -1.000000000000,
+    0.000000000000, 0.000000000000, -0.200200200200, 0.000000000000
+  };
+
+  sc_camera_aspect_ratio(camera, 8, 6);
+  sc_camera_clipping_dist(camera, 0.1, 100.0);
+  sc_camera_fov(camera, M_PI / 3.0);
+  sc_camera_get_projection_mat(camera, proj_matrix);
+
+  for (size_t j = 0; j < 4; ++j)
+  {
+    for (size_t i = 0; i < 4; ++i)
+    {
+      printf("%lf ", proj_matrix[j * 4 + i]);
+    }
+    printf("\n");
+  }
+
+  check_difference(expected,
+                   proj_matrix,
+                   16,
+                   "Get projection matrix test failed.");
+}
+
 int
 main (int argc, char **argv)
 {
@@ -137,6 +229,12 @@ main (int argc, char **argv)
   sc_init (sc_MPI_COMM_WORLD, 0, 1, NULL, SC_LP_DEFAULT);
 
   camera = sc_camera_new();
+
+  test_get_view_mat(camera);
+
+  test_view_transform(camera);
+
+  test_get_projection_mat(camera);
 
   test_yaw_pitch_roll(camera);
 
