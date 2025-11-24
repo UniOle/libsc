@@ -128,6 +128,34 @@ test_look_at(sc_camera_t *camera)
                    "Look at up x test failed.");
 }
 
+void
+test_view_transform_trivial(sc_camera_t *camera)
+{
+  sc_camera_vec3_t in0 = {0., 0., 1.};
+  sc_camera_vec3_t in1 = {2., 3., 5.};
+  sc_camera_vec3_t expected;
+  sc_array_t *points_in, *points_out;
+
+  points_in  = sc_array_new_count(sizeof(sc_camera_vec3_t), 3);
+  points_out = sc_array_new(sizeof(sc_camera_vec3_t));
+
+  memcpy(sc_array_index(points_in, 0), &in0, sizeof(sc_camera_vec3_t));
+  memcpy(sc_array_index(points_in, 1), &in1, sizeof(sc_camera_vec3_t));
+
+  sc_camera_init(camera);
+
+  sc_camera_view_transform(camera, points_in, points_out);
+
+  expected[0] = 0.; expected[1] = 0.; expected[2] = 0.;
+  check_difference (expected, sc_array_index(points_out, 0), 3, "View transform test failed.");
+
+  expected[0] = 2.; expected[1] = 3.; expected[2] = 4.;
+  check_difference (expected, sc_array_index(points_out, 1), 3, "View transform test failed.");
+
+  sc_array_destroy(points_in);
+  sc_array_destroy(points_out);
+}
+
 void 
 test_view_transform(sc_camera_t *camera)
 {
@@ -231,6 +259,8 @@ main (int argc, char **argv)
   camera = sc_camera_new();
 
   test_get_view_mat(camera);
+
+  test_view_transform_trivial(camera);
 
   test_view_transform(camera);
 
