@@ -39,6 +39,23 @@ check_difference(sc_camera_coords_t *expected,
   }
 }
 
+static void
+check_difference_homogeneous( sc_camera_vec4_t expected, 
+                              sc_camera_vec4_t actual, const char *msg)
+{
+  sc_camera_vec3_t scaled_expected, scaled_actual;
+
+  scaled_expected[0] = expected[0] * actual[3];
+  scaled_expected[1] = expected[1] * actual[3];
+  scaled_expected[2] = expected[2] * actual[3];
+  
+  scaled_actual[0] = actual[0] * expected[3];
+  scaled_actual[1] = actual[1] * expected[3];
+  scaled_actual[2] = actual[2] * expected[3];
+
+  check_difference(scaled_expected, scaled_actual, 3, msg);
+}
+
 
 static void 
 quat_conjugate_transform(sc_camera_vec4_t out,
@@ -164,11 +181,11 @@ test_view_transform_trivial(sc_camera_t *camera)
 void 
 test_view_transform(sc_camera_t *camera)
 {
+  sc_array_t *points_in, *points_out;
   sc_camera_vec3_t eye = {0.0, 0.0, 5.0};
   sc_camera_vec3_t center = {3.0,4.0,5.0};
   sc_camera_vec3_t up = {3.0, 4.0, 7.0};
   sc_camera_vec3_t expected;
-  sc_array_t *points_in, *points_out;
 
   points_in  = sc_array_new_count(sizeof(sc_camera_vec3_t), 3);
   points_out = sc_array_new(sizeof(sc_camera_vec3_t));
@@ -183,15 +200,15 @@ test_view_transform(sc_camera_t *camera)
 
   expected[0] = 0.; expected[1] = 0.; expected[2] = 0.; 
   check_difference(expected, sc_array_index(points_out, 0),
-     3, "View transform test failed 0.");
+     3, "View transform test failed.");
 
   expected[0] = 0.; expected[1] = 0.; expected[2] = -5.; 
   check_difference(expected, sc_array_index(points_out, 1),
-     3, "View transform test failed 1.");
+     3, "View transform test failed.");
 
   expected[0] = 0.; expected[1] = 2.; expected[2] = -5.; 
   check_difference(expected, sc_array_index(points_out, 2),
-     3, "View transform test failed 2.");
+     3, "View transform test failed.");
 
   sc_array_destroy(points_in);
   sc_array_destroy(points_out);
@@ -223,6 +240,43 @@ test_get_view_mat(sc_camera_t *camera)
                    "Get view matrix test failed.");
 }
 
+void 
+test_projection_transform(sc_camera_t *camera)
+{
+  sc_array_t *points_in, *points_out;
+  sc_camera_vec3_t in0 = {-0.01, 0.01, -0.01};
+  sc_camera_vec3_t in1 = {100., -100., -100.};
+  sc_camera_vec3_t in2 = {0., 0., -1.};
+  sc_camera_vec4_t expected;
+  sc_camera_coords_t *p;
+
+  points_in  = sc_array_new_count(sizeof(sc_camera_vec3_t), 3);
+  points_out = sc_array_new(sizeof(sc_camera_vec4_t));
+
+  memcpy(sc_array_index(points_in, 0), &in0, sizeof(sc_camera_vec3_t));
+  memcpy(sc_array_index(points_in, 1), &in1, sizeof(sc_camera_vec3_t));
+  memcpy(sc_array_index(points_in, 2), &in2, sizeof(sc_camera_vec3_t));
+
+  sc_camera_init(camera);
+  sc_camera_projection_transform(camera, points_in, points_out);
+
+  expected[0] = -1.; expected[1] = 1.; expected[2] = -1.; expected[3] = 1.;
+  check_difference_homogeneous(expected, sc_array_index(points_out, 0), 
+    "Projection transform test failed.");
+
+  expected[0] = 1.; expected[1] = -1.; expected[2] = 1.; expected[3] = 1;
+  check_difference_homogeneous(expected, sc_array_index(points_out, 1), 
+    "Projection transform test failed.");
+
+  p = sc_array_index(points_out, 2);
+  SC_CHECK_ABORT(p[2] > -1. && p[2] < 1., "Projection transform test failed.");
+  expected[0] = 0.; expected[1] = 0.; expected[2] = p[2]; expected[3] = p[3];
+  check_difference_homogeneous(expected, p, "Projection transformation test failed.");
+
+  sc_array_destroy(points_in);
+  sc_array_destroy(points_out);
+}
+
 void
 test_get_projection_mat(sc_camera_t *camera)
 {
@@ -241,15 +295,6 @@ test_get_projection_mat(sc_camera_t *camera)
   sc_camera_clipping_dist(camera, 0.1, 100.0);
   sc_camera_fov(camera, M_PI / 3.0);
   sc_camera_get_projection_mat(camera, proj_matrix);
-
-  for (size_t j = 0; j < 4; ++j)
-  {
-    for (size_t i = 0; i < 4; ++i)
-    {
-      printf("%lf ", proj_matrix[j * 4 + i]);
-    }
-    printf("\n");
-  }
 
   check_difference(expected,
                    proj_matrix,
@@ -274,6 +319,8 @@ main (int argc, char **argv)
   test_view_transform(camera);
 
   test_get_projection_mat(camera);
+
+  test_projection_transform(camera);
 
   test_yaw_pitch_roll(camera);
 
