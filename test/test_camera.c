@@ -73,6 +73,7 @@ test_yaw_pitch_roll(sc_camera_t *camera)
     perspective the camera rotates the world  */
 
   sc_camera_vec4_t p = {1., 1., 1., 0.};
+  sc_camera_vec3_t expected;
 
   /* sets rotation to (0,0,0,1) (identity rotation) */
   sc_camera_init(camera);
@@ -80,7 +81,8 @@ test_yaw_pitch_roll(sc_camera_t *camera)
   sc_camera_yaw(camera, M_PI/2.0);
   quat_conjugate_transform(p, camera->rotation, p);
 
-  check_difference((sc_camera_vec3_t){-1., 1., 1.}, p, 3, "Yaw test failed.");
+  expected[0] = -1.; expected[1] = 1.; expected[2] = 1.;
+  check_difference(expected, p, 3, "Yaw test failed.");
 
   p[0] = 1.; p[1] = 1.; p[2] = 1.; p[3] = 0.;
 
@@ -88,7 +90,8 @@ test_yaw_pitch_roll(sc_camera_t *camera)
   sc_camera_pitch(camera, M_PI/2.0);
   quat_conjugate_transform(p, camera->rotation, p);
 
-  check_difference((sc_camera_vec3_t){1., 1., -1.}, p, 3, "Pitch test failed.");
+  expected[0] = 1.; expected[1] = 1.; expected[2] = -1.;
+  check_difference(expected, p, 3, "Pitch test failed.");
 
   p[0] = 1.; p[1] = 1.; p[2] = 1.; p[3] = 0.;
 
@@ -96,7 +99,8 @@ test_yaw_pitch_roll(sc_camera_t *camera)
   sc_camera_roll(camera, M_PI/2.0);
   quat_conjugate_transform(p, camera->rotation, p);
 
-  check_difference((sc_camera_vec3_t){1., -1., 1.}, p, 3, "Roll test failed.");
+  expected[0] = 1.; expected[1] = -1.; expected[2] = 1.;
+  check_difference(expected, p, 3, "Roll test failed.");
 }
 
 static void
@@ -105,8 +109,7 @@ test_look_at(sc_camera_t *camera)
   sc_camera_vec3_t eye = {1., 2., 3.};
   sc_camera_vec3_t center = {1., 0., -1.};
   sc_camera_vec3_t up = {0., 1., 0.};
-
-  sc_camera_vec4_t p;
+  sc_camera_vec4_t p, expected;
 
   sc_camera_look_at(camera, eye, center, up);
 
@@ -117,14 +120,16 @@ test_look_at(sc_camera_t *camera)
   p[0] = 0.; p[1] = -2.; p[2] = -4.; p[3] = 0.;
   quat_conjugate_transform(p, camera->rotation, p);
 
-  check_difference((sc_camera_vec4_t){0., 0., -sqrt(20.), 0.}, p, 4,
+  expected[0] = 0.; expected[1] = 0.; expected[2] = -sqrt(20.); expected[3] = 0.;
+  check_difference(expected, p, 4,
                    "Look at test failed.");
 
   /* p = up */
   p[0] = 0.; p[1] = 1.; p[2] = 0.; p[3] = 0.;
   quat_conjugate_transform(p, camera->rotation, p);
 
-  check_difference(&p[0], (sc_camera_coords_t[]){0.}, 1,
+  expected[0] = 0.;
+  check_difference(&p[0], expected, 1,
                    "Look at up x test failed.");
 }
 
@@ -162,6 +167,7 @@ test_view_transform(sc_camera_t *camera)
   sc_camera_vec3_t eye = {0.0, 0.0, 5.0};
   sc_camera_vec3_t center = {3.0,4.0,5.0};
   sc_camera_vec3_t up = {3.0, 4.0, 7.0};
+  sc_camera_vec3_t expected;
   sc_array_t *points_in, *points_out;
 
   points_in  = sc_array_new_count(sizeof(sc_camera_vec3_t), 3);
@@ -175,13 +181,16 @@ test_view_transform(sc_camera_t *camera)
 
   sc_camera_view_transform(camera, points_in, points_out);
 
-  check_difference((sc_camera_vec3_t) {0.,0.,0.}, sc_array_index(points_out, 0),
+  expected[0] = 0.; expected[1] = 0.; expected[2] = 0.; 
+  check_difference(expected, sc_array_index(points_out, 0),
      3, "View transform test failed 0.");
 
-  check_difference((sc_camera_vec3_t) {0.,0.,-5.}, sc_array_index(points_out, 1),
+  expected[0] = 0.; expected[1] = 0.; expected[2] = -5.; 
+  check_difference(expected, sc_array_index(points_out, 1),
      3, "View transform test failed 1.");
 
-  check_difference((sc_camera_vec3_t) {0.,2.,-5.}, sc_array_index(points_out, 2),
+  expected[0] = 0.; expected[1] = 2.; expected[2] = -5.; 
+  check_difference(expected, sc_array_index(points_out, 2),
      3, "View transform test failed 2.");
 
   sc_array_destroy(points_in);
